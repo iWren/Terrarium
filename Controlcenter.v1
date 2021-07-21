@@ -1,0 +1,115 @@
+// testshapes demo for Adafruit RGBmatrixPanel library.
+// Demonstrates the drawing abilities of the RGBmatrixPanel library.
+// For 32x32 RGB LED matrix:
+// http://www.adafruit.com/products/607
+// 32x32 MATRICES DO NOT WORK WITH ARDUINO UNO or METRO 328.
+
+// Written by Limor Fried/Ladyada & Phil Burgess/PaintYourDragon
+// for Adafruit Industries.
+// BSD license, all text above must be included in any redistribution.
+
+
+//7/20/21 new version, not using tmp36, loop tested, added soil sensor
+
+#include <RGBmatrixPanel.h>
+#include "Adafruit_seesaw.h"
+#include <Arduino.h>
+#include <Wire.h>
+#include "Adafruit_SHT31.h"
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define CLK 11
+#define OE   9
+#define LAT 10
+#define A   A0
+#define B   A1
+#define C   A2
+#define D   A3
+
+int relay_humidity = 5;
+int relay_peltier = 4;
+int relay_light = 3;
+int relay_fan = 2;
+
+Adafruit_seesaw ss;
+uint8_t loopCnt = 0;
+
+Adafruit_SHT31 sht31 = Adafruit_SHT31();
+bool enableHeater = false;
+
+
+RGBmatrixPanel matrix(A, B, C, D, CLK, LAT, OE, false);
+
+void setup() {
+
+  Serial.begin(9600);
+
+  matrix.begin();
+
+  sht31.begin(0x44);
+
+  ss.begin(0x36);
+
+  pinMode(relay_humidity, OUTPUT);
+  digitalWrite(relay_humidity, HIGH);
+  
+  pinMode(relay_peltier, OUTPUT);
+  digitalWrite(relay_peltier, LOW);
+
+  pinMode(relay_light, OUTPUT);
+  digitalWrite(relay_light, LOW);
+
+  pinMode(relay_fan, OUTPUT);
+  digitalWrite(relay_fan, HIGH);
+
+  // fix the screen
+  matrix.fillRect(0, 0, 32, 32, matrix.Color333(7, 0, 7));
+  //matrix.fillRect(0, 0, 32, 32, matrix.Color333(0, 0, 0));
+  //delay(500);
+  
+}
+
+void loop() {
+
+//air temp and humidity sensing//
+
+
+  float t = sht31.readTemperature();
+  float h = sht31.readHumidity();
+
+  Serial.print("Air Temperature: ");
+  Serial.println(t);
+  Serial.print("Humidity: ");
+  Serial.println(h);
+  
+  Serial.print("Capacitive: "); 
+  //Serial.println(capread);
+
+
+
+//soil temp and moisture//
+  uint16_t capread = ss.touchRead(0);
+  float soil_temp = ss.getTemp();
+
+  Serial.print("Soil temperature: ");
+  Serial.println(soil_temp);
+  Serial.print("Capacitive: "); 
+  Serial.println(capread);
+
+//feedback loop//
+  if (t > 25.00) {
+    digitalWrite(relay_peltier, LOW);
+  }
+
+  //else if ( 30.00 > t > 25.00) {
+  //  digitalWrite(relay_peltier, LOW);
+  //}
+  
+  else {
+    digitalWrite(relay_peltier, HIGH);
+  }
+
+  delay(500);
+}
+  
