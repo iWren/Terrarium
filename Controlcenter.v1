@@ -10,6 +10,7 @@
 
 
 //7/20/21 new version, not using tmp36, loop tested, added soil sensor
+//7/22/21 attached final sensor(dallas waterproof temp), integrated into code
 
 #include <RGBmatrixPanel.h>
 #include "Adafruit_seesaw.h"
@@ -27,6 +28,8 @@
 #define C   A2
 #define D   A3
 
+#define ONE_WIRE_BUS 6
+
 int relay_humidity = 5;
 int relay_peltier = 4;
 int relay_light = 3;
@@ -38,6 +41,8 @@ uint8_t loopCnt = 0;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 bool enableHeater = false;
 
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
 
 RGBmatrixPanel matrix(A, B, C, D, CLK, LAT, OE, false);
 
@@ -51,11 +56,13 @@ void setup() {
 
   ss.begin(0x36);
 
+  sensors.begin();
+
   pinMode(relay_humidity, OUTPUT);
   digitalWrite(relay_humidity, HIGH);
   
   pinMode(relay_peltier, OUTPUT);
-  digitalWrite(relay_peltier, LOW);
+  digitalWrite(relay_peltier, HIGH);
 
   pinMode(relay_light, OUTPUT);
   digitalWrite(relay_light, LOW);
@@ -73,7 +80,6 @@ void setup() {
 void loop() {
 
 //air temp and humidity sensing//
-
 
   float t = sht31.readTemperature();
   float h = sht31.readHumidity();
@@ -97,19 +103,30 @@ void loop() {
   Serial.print("Capacitive: "); 
   Serial.println(capread);
 
+//water temp//
+
+  sensors.requestTemperatures(); 
+
+  float water_temp = sensors.getTempCByIndex(0);
+
+  Serial.print("Celsius temperature: ");
+  Serial.print(water_temp); 
+
 //feedback loop//
-  if (t > 25.00) {
+
+  if (water_temp > 24.00) {
     digitalWrite(relay_peltier, LOW);
   }
 
-  //else if ( 30.00 > t > 25.00) {
-  //  digitalWrite(relay_peltier, LOW);
+  //else if ( 24 > t > ) {
+  //  digitalWrite(relay_peltier, HIGH);
   //}
   
   else {
     digitalWrite(relay_peltier, HIGH);
   }
 
-  delay(500);
+  delay(1000);
+
 }
   
