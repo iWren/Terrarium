@@ -11,6 +11,7 @@
 
 //7/20/21 new version, not using tmp36, loop tested, added soil sensor
 //7/22/21 attached final sensor(dallas waterproof temp), integrated into code
+//8/4/21 retested code, troubleshooting(connection issues), got "water temperature" down to around 13.25 C
 
 #include <RGBmatrixPanel.h>
 #include "Adafruit_seesaw.h"
@@ -109,18 +110,14 @@ void loop() {
 
   float water_temp = sensors.getTempCByIndex(0);
 
-  Serial.print("Celsius temperature: ");
-  Serial.print(water_temp); 
+  Serial.print("Water temperature: ");
+  Serial.println(water_temp); 
 
 //feedback loop//
 
-  if (water_temp > 24.00) {
+  if (water_temp > 5.00) {
     digitalWrite(relay_peltier, LOW);
   }
-
-  //else if ( 24 > t > ) {
-  //  digitalWrite(relay_peltier, HIGH);
-  //}
   
   else {
     digitalWrite(relay_peltier, HIGH);
