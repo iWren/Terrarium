@@ -12,6 +12,8 @@
 //7/20/21 new version, not using tmp36, loop tested, added soil sensor
 //7/22/21 attached final sensor(dallas waterproof temp), integrated into code
 //8/4/21 retested code, troubleshooting(connection issues), got "water temperature" down to around 13.25 C
+//8/5-6/21 worked on a timer system(failed) and then a button system that can switch system from night to day mode, water temp down to 15.56
+
 
 #include <RGBmatrixPanel.h>
 #include "Adafruit_seesaw.h"
@@ -44,8 +46,33 @@ bool enableHeater = false;
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
+float water_temp;
 
 RGBmatrixPanel matrix(A, B, C, D, CLK, LAT, OE, false);
+
+//enter values for start_time and turn_off_time and wake_up_time
+
+
+//float start_time_hours;
+//float start_time_minutes;
+//float start_time;
+//float turn_off_time_hours;
+//float turn_off_time_minutes;
+//float wake_up_time_hours;
+//float wake_up_time_minutes;
+//float night_length;
+//float gap_time;
+//float time_;
+//float global_time;
+//bool night;
+
+//button activation
+
+int buttonpin = 7;
+int buttonstate;
+int i;
+bool night;
+
 
 void setup() {
 
@@ -71,27 +98,65 @@ void setup() {
   pinMode(relay_fan, OUTPUT);
   digitalWrite(relay_fan, HIGH);
 
-  // fix the screen
+  pinMode(buttonpin, INPUT);
+
+  // screen color, change to be user input changeable
   matrix.fillRect(0, 0, 32, 32, matrix.Color333(7, 0, 7));
-  //matrix.fillRect(0, 0, 32, 32, matrix.Color333(0, 0, 0));
-  //delay(500);
-  
+
+
+  //establish start and end time
+
+/*
+ * start_time = start_time_hours * 3600 + start_time)minutes * 60;
+ * night_time = turn_off_time_hours * 3600 + turn_off_time_minutes * 60;
+ * wakeup_time = wake_up_time_hours * 3600 + wake_up_time_minutes * 60;
+ * night_length = 86400 - (night_time - wakeup_time);
+ * gap_time = end_time - start_time;
+ */
+
 }
 
+
+
+void button() {
+  // put your main code here, to run repeatedly:
+
+ buttonstate = digitalRead(buttonpin);
+
+if (buttonstate == LOW && i % 2 != 0) {
+  night = true;
+  i++;
+}
+
+else if (buttonstate == LOW && i % 2 == 0) {
+  night = false;
+  i++;
+}
+
+
+else {}
+
+}
+
+
+
 void loop() {
+
+  button();
 
 //air temp and humidity sensing//
 
   float t = sht31.readTemperature();
   float h = sht31.readHumidity();
 
+  /*
+  
   Serial.print("Air Temperature: ");
   Serial.println(t);
   Serial.print("Humidity: ");
   Serial.println(h);
-  
-  Serial.print("Capacitive: "); 
-  //Serial.println(capread);
+
+  */
 
 
 
@@ -99,10 +164,14 @@ void loop() {
   uint16_t capread = ss.touchRead(0);
   float soil_temp = ss.getTemp();
 
+  /*
+
   Serial.print("Soil temperature: ");
   Serial.println(soil_temp);
   Serial.print("Capacitive: "); 
   Serial.println(capread);
+
+  */
 
 //water temp//
 
@@ -110,20 +179,41 @@ void loop() {
 
   float water_temp = sensors.getTempCByIndex(0);
 
+  
   Serial.print("Water temperature: ");
   Serial.println(water_temp); 
 
-//feedback loop//
-
-  if (water_temp > 5.00) {
-    digitalWrite(relay_peltier, LOW);
-  }
+  //night loop
   
-  else {
+  if (night == true) {
+
+    matrix.fillRect(0, 0, 32, 32, matrix.Color333(0, 0, 0));
+    Serial.println("Night time!");
+
+    if (water_temp > 15) {
+    Serial.println("not cold enough");
+    digitalWrite(relay_peltier, LOW);
+    
+    }
+
+    else {
+    Serial.println("cold enough");
     digitalWrite(relay_peltier, HIGH);
+    }
+
   }
 
-  delay(1000);
+ else if (night == false) {
+
+    matrix.fillRect(0, 0, 32, 32, matrix.Color333(7, 0, 7));
+    Serial.println("wake up");
+    digitalWrite(relay_peltier, HIGH);
+    
+  }
+
+delay(1000);
 
 }
+
+
   
