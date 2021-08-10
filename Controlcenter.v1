@@ -12,7 +12,10 @@
 //7/20/21 new version, not using tmp36, loop tested, added soil sensor
 //7/22/21 attached final sensor(dallas waterproof temp), integrated into code
 //8/4/21 retested code, troubleshooting(connection issues), got "water temperature" down to around 13.25 C
-//8/5-6/21 worked on a timer system(failed) and then a button system that can switch system from night to day mode, water temp down to 15.56
+//8/5-6/21 worked on a timer system(failed) and then a button system that can switch system from night to day mode, water temp down to 15.56, working on air temp cooling
+//8/7/21 troubleshooting, button logic reversed now fixed
+//8/8/21 rewiring, new fans came and integrated, put everything on one control board, problem with air_temp_control(), will troubleshoot tomorrow
+//8/9/21 located a problematic piece of code, troubleshooted, integrated fans, everything working atleast for night mode, will make day loop tomorrow
 
 
 #include <RGBmatrixPanel.h>
@@ -33,20 +36,29 @@
 
 #define ONE_WIRE_BUS 6
 
-int relay_humidity = 5;
-int relay_peltier = 4;
+int relay_humidity = 4;
+int relay_peltier = 5;
 int relay_light = 3;
 int relay_fan = 2;
 
 Adafruit_seesaw ss;
 uint8_t loopCnt = 0;
 
+float soil_temp_f;
+
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 bool enableHeater = false;
 
+float t_f;
+
+bool air_cool;
+bool cold_enough;
+
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
+
 float water_temp;
+float water_temp_f;
 
 RGBmatrixPanel matrix(A, B, C, D, CLK, LAT, OE, false);
 
@@ -70,7 +82,7 @@ RGBmatrixPanel matrix(A, B, C, D, CLK, LAT, OE, false);
 
 int buttonpin = 7;
 int buttonstate;
-int i;
+int i = 1;
 bool night;
 
 
@@ -119,35 +131,73 @@ void setup() {
 
 
 void button() {
-  // put your main code here, to run repeatedly:
 
- buttonstate = digitalRead(buttonpin);
+buttonstate = digitalRead(buttonpin);
 
-if (buttonstate == LOW && i % 2 != 0) {
+if (buttonstate == HIGH && i % 2 != 0) {
   night = true;
   i++;
 }
 
-else if (buttonstate == LOW && i % 2 == 0) {
+else if (buttonstate == HIGH && i % 2 == 0) {
   night = false;
   i++;
 }
-
 
 else {}
 
 }
 
+void bool_air_control() {
+  
+ if (night == true && t_f > 65) {
+    air_cool = true;
+  }
+
+  else if (night == true && t_f <= 65) {
+    air_cool = false;
+  }
+
+  else {
+    air_cool = false;
+  }
+
+}
+
+void air_temp_control() {
+  
+  if (air_cool == true && cold_enough == true) {
+    digitalWrite(relay_humidity, LOW);
+    digitalWrite(relay_fan, LOW);
+    Serial.println("Air cooling");
+  }
+
+  else {
+    digitalWrite(relay_humidity, HIGH);
+    digitalWrite(relay_fan, HIGH);
+    Serial.println("not plapping");
+  }
+
+}
 
 
 void loop() {
 
   button();
 
+  Serial.println(night);
+
 //air temp and humidity sensing//
 
   float t = sht31.readTemperature();
+  t_f = t * 1.8 + 32;
   float h = sht31.readHumidity();
+
+  Serial.println(t_f);
+
+  bool_air_control();
+
+  Serial.println(air_cool);
 
   /*
   
@@ -163,6 +213,7 @@ void loop() {
 //soil temp and moisture//
   uint16_t capread = ss.touchRead(0);
   float soil_temp = ss.getTemp();
+  soil_temp_f = soil_temp * 1.8 + 32;
 
   /*
 
@@ -172,16 +223,18 @@ void loop() {
   Serial.println(capread);
 
   */
+  
 
 //water temp//
 
   sensors.requestTemperatures(); 
 
-  float water_temp = sensors.getTempCByIndex(0);
+  water_temp = sensors.getTempCByIndex(0);
+  water_temp_f = water_temp * 1.8 + 32;
 
   
   Serial.print("Water temperature: ");
-  Serial.println(water_temp); 
+  Serial.println(water_temp_f); 
 
   //night loop
   
@@ -190,16 +243,26 @@ void loop() {
     matrix.fillRect(0, 0, 32, 32, matrix.Color333(0, 0, 0));
     Serial.println("Night time!");
 
-    if (water_temp > 15) {
+    if (water_temp_f >= 60.00) {
     Serial.println("not cold enough");
+    cold_enough = false;
     digitalWrite(relay_peltier, LOW);
     
     }
 
-    else {
+    else if ( 59.00 > water_temp_f){
     Serial.println("cold enough");
+    cold_enough = true;
     digitalWrite(relay_peltier, HIGH);
     }
+
+    else if (water_temp_f >= 59.00) {
+    Serial.println("get in range");
+    cold_enough = true;
+    digitalWrite(relay_peltier, LOW);
+    }
+
+    Serial.println(cold_enough);
 
   }
 
@@ -211,9 +274,10 @@ void loop() {
     
   }
 
+air_temp_control();
+
 delay(1000);
 
 }
 
 
-  
