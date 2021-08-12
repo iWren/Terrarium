@@ -16,6 +16,7 @@
 //8/7/21 troubleshooting, button logic reversed now fixed
 //8/8/21 rewiring, new fans came and integrated, put everything on one control board, problem with air_temp_control(), will troubleshoot tomorrow
 //8/9/21 located a problematic piece of code, troubleshooted, integrated fans, everything working atleast for night mode, will make day loop tomorrow
+//8/10-11/21 didn't do much, finished working on some day code as well as some contigencies/humidity loop, everything works fine as of now, will make night loop independent of button now
 
 
 #include <RGBmatrixPanel.h>
@@ -41,14 +42,18 @@ int relay_peltier = 5;
 int relay_light = 3;
 int relay_fan = 2;
 
+//int moist = 8;
+
 Adafruit_seesaw ss;
 uint8_t loopCnt = 0;
+uint8_t capread;
 
 float soil_temp_f;
 
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 bool enableHeater = false;
 
+float h;
 float t_f;
 
 bool air_cool;
@@ -112,6 +117,8 @@ void setup() {
 
   pinMode(buttonpin, INPUT);
 
+  //pinMode(moist, OUTPUT);
+
   // screen color, change to be user input changeable
   matrix.fillRect(0, 0, 32, 32, matrix.Color333(7, 0, 7));
 
@@ -169,16 +176,52 @@ void air_temp_control() {
   if (air_cool == true && cold_enough == true) {
     digitalWrite(relay_humidity, LOW);
     digitalWrite(relay_fan, LOW);
-    Serial.println("Air cooling");
   }
 
   else {
     digitalWrite(relay_humidity, HIGH);
     digitalWrite(relay_fan, HIGH);
-    Serial.println("not plapping");
   }
 
 }
+
+void humidity_control() {
+
+  if (h < 80) {
+    digitalWrite(relay_humidity, LOW);
+    digitalWrite(relay_fan, LOW);
+  }
+
+  else {
+    digitalWrite(relay_humidity, HIGH);
+    digitalWrite(relay_fan, HIGH);
+  }
+  
+}
+
+//overheating warning
+
+void air_temp_warning() {
+  if (t_f >= 90) {
+    digitalWrite(relay_humidity, LOW);
+    digitalWrite(relay_fan, LOW);
+    night == true;
+  }
+
+  else{}
+}
+
+
+//moisture warning
+
+/*
+void moisture_control() {
+
+  if (capread > 500) {
+    digitalWrite(
+  }
+}
+*/
 
 
 void loop() {
@@ -191,13 +234,16 @@ void loop() {
 
   float t = sht31.readTemperature();
   t_f = t * 1.8 + 32;
-  float h = sht31.readHumidity();
+  h = sht31.readHumidity();
 
   Serial.println(t_f);
+  Serial.println(h);
 
   bool_air_control();
 
   Serial.println(air_cool);
+
+  humidity_control();
 
   /*
   
@@ -211,7 +257,7 @@ void loop() {
 
 
 //soil temp and moisture//
-  uint16_t capread = ss.touchRead(0);
+  capread = ss.touchRead(0);
   float soil_temp = ss.getTemp();
   soil_temp_f = soil_temp * 1.8 + 32;
 
@@ -266,6 +312,8 @@ void loop() {
 
   }
 
+//day_loop
+
  else if (night == false) {
 
     matrix.fillRect(0, 0, 32, 32, matrix.Color333(7, 0, 7));
@@ -276,8 +324,11 @@ void loop() {
 
 air_temp_control();
 
+//contingencies
+
+air_temp_warning();
+
+
 delay(1000);
 
 }
-
-
