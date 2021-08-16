@@ -1,0 +1,189 @@
+/* This example will read all channels from the AS7341 and print out reported values */
+
+#include <Adafruit_AS7341.h>
+
+Adafruit_AS7341 as7341;
+
+int blue = 12;
+int green = 13;
+int red = 8;
+
+int average_infrared;
+
+int i = 1;
+
+int ambient_light_415;
+int ambient_light_445;
+int ambient_light_480;
+int ambient_light_515;
+int ambient_light_555;
+int ambient_light_590;
+int ambient_light_630;
+int ambient_light_680;
+int ambient_light_CLEAR;
+int ambient_light_NIR;
+
+int a_l_light_415;
+int a_l_light_445;
+int a_l_light_480;
+int a_l_light_515;
+int a_l_light_555;
+int a_l_light_590;
+int a_l_light_630;
+int a_l_light_680;
+int a_l_light_CLEAR;
+int a_l_light_NIR;
+
+int true_light_415;
+int true_light_445;
+int true_light_480;
+int true_light_515;
+int true_light_555;
+int true_light_590;
+int true_light_630;
+int true_light_680;
+int true_light_CLEAR;
+int true_light_NIR;
+
+void setup() {
+  
+  Serial.begin(115200);
+
+  pinMode(blue, OUTPUT);
+  digitalWrite(blue, HIGH);
+  
+  pinMode(green, OUTPUT);
+  digitalWrite(green, HIGH);
+  
+  pinMode(red, OUTPUT);
+  digitalWrite(red, HIGH);
+
+  // Wait for communication with the host computer serial monitor
+  while (!Serial) {
+    delay(1);
+  }
+  
+  if (!as7341.begin()){
+    Serial.println("Could not find AS7341");
+    while (1) { delay(10); }
+  }
+
+  as7341.setATIME(100);
+  as7341.setASTEP(999);
+  as7341.setGain(AS7341_GAIN_256X);
+}
+
+void wait() {
+
+  if (Serial.available() == 0) {}
+
+  else if (Serial.available() != 0) {
+    i++;
+  }
+}
+
+void loop() {
+
+  wait();
+  
+  // Read all channels at the same time and store in as7341 object
+  if (!as7341.readAllChannels()){
+    Serial.println("Error reading all channels!");
+    return;
+  }
+
+  if (i % 2 == 0) {
+  // Print out the stored values for each channel
+
+  Serial.println("Ambient Light Detection: ");
+  
+  ambient_light_415 = (as7341.getChannel(AS7341_CHANNEL_415nm_F1));
+  ambient_light_445 = (as7341.getChannel(AS7341_CHANNEL_445nm_F2));
+  ambient_light_480 = (as7341.getChannel(AS7341_CHANNEL_480nm_F3));
+  ambient_light_515 = (as7341.getChannel(AS7341_CHANNEL_515nm_F4));
+  ambient_light_555 = (as7341.getChannel(AS7341_CHANNEL_555nm_F5));
+  ambient_light_590 = (as7341.getChannel(AS7341_CHANNEL_590nm_F6));
+  ambient_light_630 = (as7341.getChannel(AS7341_CHANNEL_630nm_F7));
+  ambient_light_680 = (as7341.getChannel(AS7341_CHANNEL_680nm_F8));
+  ambient_light_CLEAR = (as7341.getChannel(AS7341_CHANNEL_CLEAR));
+  ambient_light_NIR = (as7341.getChannel(AS7341_CHANNEL_NIR));
+
+  Serial.println(ambient_light_415);
+  Serial.println(ambient_light_445);
+  Serial.println(ambient_light_480);
+  Serial.println(ambient_light_515);
+  Serial.println(ambient_light_555);
+  Serial.println(ambient_light_590);
+  Serial.println(ambient_light_630);
+  Serial.println(ambient_light_680);
+  Serial.println(ambient_light_CLEAR);
+  Serial.println(ambient_light_NIR);
+
+  Serial.println(" ");
+ 
+  }
+
+  else if (i % 3 == 0) {
+    
+  Serial.println("A_L Light Detection: ");
+  
+  a_l_light_415 = (as7341.getChannel(AS7341_CHANNEL_415nm_F1));
+  a_l_light_445 = (as7341.getChannel(AS7341_CHANNEL_445nm_F2));
+  a_l_light_480 = (as7341.getChannel(AS7341_CHANNEL_480nm_F3));
+  a_l_light_515 = (as7341.getChannel(AS7341_CHANNEL_515nm_F4));
+  a_l_light_555 = (as7341.getChannel(AS7341_CHANNEL_555nm_F5));
+  a_l_light_590 = (as7341.getChannel(AS7341_CHANNEL_590nm_F6));
+  a_l_light_630 = (as7341.getChannel(AS7341_CHANNEL_630nm_F7));
+  a_l_light_680 = (as7341.getChannel(AS7341_CHANNEL_680nm_F8));
+  a_l_light_CLEAR = (as7341.getChannel(AS7341_CHANNEL_CLEAR));
+  a_l_light_NIR = (as7341.getChannel(AS7341_CHANNEL_NIR));
+
+  Serial.println(a_l_light_415);
+  Serial.println(a_l_light_445);
+  Serial.println(a_l_light_480);
+  Serial.println(a_l_light_515);
+  Serial.println(a_l_light_555);
+  Serial.println(a_l_light_590);
+  Serial.println(a_l_light_630);
+  Serial.println(a_l_light_680);
+  Serial.println(a_l_light_CLEAR);
+  Serial.println(a_l_light_NIR);
+
+
+  Serial.println(" ");
+
+  }
+
+  else if (i % 4 == 0) {
+
+   Serial.println("True Light Determination: ");
+
+   true_light_415 = a_l_light_415 - ambient_light_415;
+   true_light_445 = a_l_light_445 - ambient_light_445;
+   true_light_480 = a_l_light_480 - ambient_light_480;
+   true_light_515 = a_l_light_515 - ambient_light_515;
+   true_light_555 = a_l_light_555 - ambient_light_555;
+   true_light_590 = a_l_light_590 - ambient_light_590;
+   true_light_630 = a_l_light_630 - ambient_light_630;
+   true_light_680 = a_l_light_680 - ambient_light_680;
+   true_light_CLEAR = a_l_light_CLEAR - ambient_light_CLEAR;
+
+   Serial.println(true_light_415);
+   Serial.println(true_light_445);
+   Serial.println(true_light_480);
+   Serial.println(true_light_515);
+   Serial.println(true_light_555);
+   Serial.println(true_light_590);
+   Serial.println(true_light_630);
+   Serial.println(true_light_680);
+   Serial.println(true_light_CLEAR);
+   Serial.println(true_light_NIR);
+
+   Serial.println(" ");
+    
+  }
+
+
+  delay(1000);
+  
+}
