@@ -17,7 +17,7 @@
 //8/8/21 rewiring, new fans came and integrated, put everything on one control board, problem with air_temp_control(), will troubleshoot tomorrow
 //8/9/21 located a problematic piece of code, troubleshooted, integrated fans, everything working atleast for night mode, will make day loop tomorrow
 //8/10-11/21 didn't do much, finished working on some day code as well as some contigencies/humidity loop, everything works fine as of now, will make night loop independent of button now
-
+//8/12/21 finished night timer, now it works, will test later
 
 #include <RGBmatrixPanel.h>
 #include "Adafruit_seesaw.h"
@@ -69,27 +69,20 @@ RGBmatrixPanel matrix(A, B, C, D, CLK, LAT, OE, false);
 
 //enter values for start_time and turn_off_time and wake_up_time
 
+int start_time_hour = 9;
+int start_time_min = 59;
+int night_time_hour = 10;
+int night_time_min = 0;
+int day_time_hour = 10;
+int day_time_min = 1;
+int start_time = start_time_hour * 3600 + start_time_min * 60;
+int night_time = night_time_hour * 3600 + night_time_min * 60;
+int day_time = day_time_hour * 3600 + day_time_min * 60;
+int gap_time = night_time - day_time;
+int time_elapsed;
 
-//float start_time_hours;
-//float start_time_minutes;
-//float start_time;
-//float turn_off_time_hours;
-//float turn_off_time_minutes;
-//float wake_up_time_hours;
-//float wake_up_time_minutes;
-//float night_length;
-//float gap_time;
-//float time_;
-//float global_time;
-//bool night;
-
-//button activation
-
-int buttonpin = 7;
-int buttonstate;
-int i = 1;
+int i_night = 2;
 bool night;
-
 
 void setup() {
 
@@ -115,8 +108,6 @@ void setup() {
   pinMode(relay_fan, OUTPUT);
   digitalWrite(relay_fan, HIGH);
 
-  pinMode(buttonpin, INPUT);
-
   //pinMode(moist, OUTPUT);
 
   // screen color, change to be user input changeable
@@ -135,8 +126,26 @@ void setup() {
 
 }
 
+void night_timer() {
+
+  time_elapsed = millis() / 1000;
+
+  if ((time_elapsed + start_time - night_time) % 86400 == 0 && i_night % 2 == 0) {
+    night = true;
+    i_night++;
+  }
+
+  else if (((time_elapsed + start_time - day_time) * (-1)) % 86400 == 0 && i_night % 2 != 0) {
+    night = false;
+    i_night++;
+  }
+
+  else {}
+  
+}
 
 
+/*
 void button() {
 
 buttonstate = digitalRead(buttonpin);
@@ -154,6 +163,8 @@ else if (buttonstate == HIGH && i % 2 == 0) {
 else {}
 
 }
+
+*/
 
 void bool_air_control() {
   
@@ -226,9 +237,7 @@ void moisture_control() {
 
 void loop() {
 
-  button();
-
-  Serial.println(night);
+  night_timer();
 
 //air temp and humidity sensing//
 
@@ -328,6 +337,9 @@ air_temp_control();
 
 air_temp_warning();
 
+Serial.println(time_elapsed);
+
+Serial.println(night);
 
 delay(1000);
 
