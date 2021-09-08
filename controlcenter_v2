@@ -1,0 +1,359 @@
+// testshapes demo for Adafruit RGBmatrixPanel library.
+// Demonstrates the drawing abilities of the RGBmatrixPanel library.
+// For 32x32 RGB LED matrix:
+// http://www.adafruit.com/products/607
+// 32x32 MATRICES DO NOT WORK WITH ARDUINO UNO or METRO 328.
+
+// Written by Limor Fried/Ladyada & Phil Burgess/PaintYourDragon
+// for Adafruit Industries.
+// BSD license, all text above must be included in any redistribution.
+
+
+//7/20/21 new version, not using tmp36, loop tested, added soil sensor
+//7/22/21 attached final sensor(dallas waterproof temp), integrated into code
+//8/4/21 retested code, troubleshooting(connection issues), got "water temperature" down to around 13.25 C
+//8/5-6/21 worked on a timer system(failed) and then a button system that can switch system from night to day mode, water temp down to 15.56, working on air temp cooling
+//8/7/21 troubleshooting, button logic reversed now fixed
+//8/8/21 rewiring, new fans came and integrated, put everything on one control board, problem with air_temp_control(), will troubleshoot tomorrow
+//8/9/21 located a problematic piece of code, troubleshooted, integrated fans, everything working atleast for night mode, will make day loop tomorrow
+//8/10-11/21 didn't do much, finished working on some day code as well as some contigencies/humidity loop, everything works fine as of now, will make night loop independent of button now
+//8/12/21 finished night timer, now it works, will test later
+#include <RGBmatrixPanel.h>
+
+#include "Adafruit_seesaw.h"
+#include <Arduino.h>
+#include <Wire.h>
+#include "Adafruit_SHT31.h"
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define CLK 11
+#define OE   9
+#define LAT 10
+#define A   A0
+#define B   A1
+#define C   A2
+#define D   A3
+
+#define ONE_WIRE_BUS 6
+
+int relay_humidity = 4;
+int relay_peltier = 5;
+int relay_light = 3;
+int relay_fan = 2;
+
+//int moist = 8;
+
+Adafruit_seesaw ss;
+uint8_t loopCnt = 0;
+uint8_t capread;
+
+float soil_temp_f;
+
+Adafruit_SHT31 sht31 = Adafruit_SHT31();
+bool enableHeater = false;
+
+float h;
+float t_f;
+
+bool air_cool;
+bool cold_enough;
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+float water_temp;
+float water_temp_f;
+
+RGBmatrixPanel matrix(A, B, C, D, CLK, LAT, OE, false);
+
+//enter values for start_time and turn_off_time and wake_up_time
+
+int start_time_hour = 24;
+int start_time_min = 2;
+int night_time_hour = 24;
+int night_time_min = 3;
+int day_time_hour = 6;
+int day_time_min = 15;
+int start_time = start_time_hour * 3600 + start_time_min * 60;
+int night_time = night_time_hour * 3600 + night_time_min * 60;
+int day_time = day_time_hour * 3600 + day_time_min * 60;
+int gap_time = night_time - day_time;
+int time_elapsed;
+
+int i_night = 2;
+bool night;
+
+void setup() {
+
+  Serial.begin(9600);
+
+  matrix.begin();
+
+  sht31.begin(0x44);
+
+  ss.begin(0x36);
+
+  sensors.begin();
+
+  pinMode(relay_humidity, OUTPUT);
+  digitalWrite(relay_humidity, HIGH);
+  
+  pinMode(relay_peltier, OUTPUT);
+  digitalWrite(relay_peltier, HIGH);
+
+  pinMode(relay_light, OUTPUT);
+  digitalWrite(relay_light, LOW);
+
+  pinMode(relay_fan, OUTPUT);
+  digitalWrite(relay_fan, HIGH);
+
+  //pinMode(moist, OUTPUT);
+
+  // screen color, change to be user input changeable
+  matrix.fillRect(0, 0, 32, 32, matrix.Color333(7, 0, 7));
+
+
+  //establish start and end time
+
+/*
+ * start_time = start_time_hours * 3600 + start_time)minutes * 60;
+ * night_time = turn_off_time_hours * 3600 + turn_off_time_minutes * 60;
+ * wakeup_time = wake_up_time_hours * 3600 + wake_up_time_minutes * 60;
+ * night_length = 86400 - (night_time - wakeup_time);
+ * gap_time = end_time - start_time;
+ */
+
+}
+
+void night_timer() {
+
+  time_elapsed = millis() / 1000;
+
+  if ((time_elapsed + start_time - night_time) % 86400 == 0 && i_night % 2 == 0) {
+    night = true;
+    i_night++;
+  }
+
+  else if (((time_elapsed + start_time - day_time) * (-1)) % 86400 == 0 && i_night % 2 != 0) {
+    night = false;
+    i_night++;
+  }
+
+  else {}
+  
+}
+
+
+/*
+void button() {
+
+buttonstate = digitalRead(buttonpin);
+
+if (buttonstate == HIGH && i % 2 != 0) {
+  night = true;
+  i++;
+}
+
+else if (buttonstate == HIGH && i % 2 == 0) {
+  night = false;
+  i++;
+}
+
+else {}
+
+}
+
+*/
+
+void bool_air_control() {
+  
+ if (night == true && t_f > 65) {
+    air_cool = true;
+  }
+
+  else if (night == true && t_f <= 65) {
+    air_cool = false;
+  }
+
+  else {
+    air_cool = false;
+  }
+
+}
+
+/*
+void air_temp_control() {
+  
+  if (air_cool == true && cold_enough == true) {
+    digitalWrite(relay_humidity, LOW);
+    digitalWrite(relay_fan, LOW);
+  }
+*/
+
+/*
+  else {
+    digitalWrite(relay_humidity, HIGH);
+    digitalWrite(relay_fan, HIGH);
+  }
+
+  */
+
+//}
+
+
+void humidity_control() {
+
+  if (h < 90) {
+    digitalWrite(relay_humidity, LOW);
+    digitalWrite(relay_fan, LOW);
+  }
+
+
+  else {
+  }
+
+  
+}
+
+//overheating warning
+
+void air_temp_warning() {
+  if (t_f >= 90) {
+    digitalWrite(relay_humidity, LOW);
+    digitalWrite(relay_fan, LOW);
+    night == true;
+  }
+
+  else{}
+}
+
+
+//moisture warning
+
+/*
+void moisture_control() {
+
+  if (capread > 500) {
+    digitalWrite(
+  }
+}
+*/
+
+
+void loop() {
+
+  night_timer();
+
+//air temp and humidity sensing//
+
+  float t = sht31.readTemperature();
+  t_f = t * 1.8 + 32;
+  h = sht31.readHumidity();
+
+  Serial.println(t_f);
+  Serial.println(h);
+
+  bool_air_control();
+
+  Serial.println(air_cool);
+
+  //humidity_control();
+
+  /*
+  
+  Serial.print("Air Temperature: ");
+  Serial.println(t);
+  Serial.print("Humidity: ");
+  Serial.println(h);
+
+  */
+
+
+
+//soil temp and moisture//
+  capread = ss.touchRead(0);
+  float soil_temp = ss.getTemp();
+  soil_temp_f = soil_temp * 1.8 + 32;
+
+  /*
+
+  Serial.print("Soil temperature: ");
+  Serial.println(soil_temp);
+  Serial.print("Capacitive: "); 
+  Serial.println(capread);
+
+  */
+  
+
+//water temp//
+
+  sensors.requestTemperatures(); 
+
+  water_temp = sensors.getTempCByIndex(0);
+  water_temp_f = water_temp * 1.8 + 32;
+
+  
+  Serial.print("Water temperature: ");
+  Serial.println(water_temp_f); 
+
+  //night loop
+  
+  if (night == true) {
+
+    matrix.fillRect(0, 0, 32, 32, matrix.Color333(0, 0, 0));
+    Serial.println("Night time!");
+
+    if (water_temp_f > 70.00) {
+    Serial.println("not cold enough");
+    digitalWrite(relay_peltier, LOW);
+    
+    digitalWrite(relay_humidity, HIGH);
+    digitalWrite(relay_fan, HIGH);
+    
+    }
+
+    else if (water_temp_f <= 70.00) {
+    Serial.println("get in range");
+    digitalWrite(relay_peltier, LOW);
+  
+    digitalWrite(relay_humidity, LOW);
+    digitalWrite(relay_fan, LOW);
+    }
+
+    else if ( 65.00 > water_temp_f){
+    Serial.println("cold enough");
+    digitalWrite(relay_peltier, HIGH);
+
+    digitalWrite(relay_humidity, LOW);
+    digitalWrite(relay_fan, LOW);
+    }
+
+  }
+
+//day_loop
+
+ else if (night == false) {
+
+    matrix.fillRect(0, 0, 32, 32, matrix.Color333(7, 0, 7));
+    Serial.println("wake up");
+    digitalWrite(relay_peltier, HIGH);
+
+    humidity_control();
+    
+  }
+
+
+//contingencies
+
+air_temp_warning();
+
+Serial.println(time_elapsed);
+
+Serial.println(night);
+
+//air_temp_control();//
+
+delay(500);
+
+}
