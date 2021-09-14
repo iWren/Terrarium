@@ -69,10 +69,10 @@ RGBmatrixPanel matrix(A, B, C, D, CLK, LAT, OE, false);
 
 //enter values for start_time and turn_off_time and wake_up_time
 
-int start_time_hour = 24;
-int start_time_min = 2;
-int night_time_hour = 24;
-int night_time_min = 3;
+int start_time_hour = 16;
+int start_time_min = 24;
+int night_time_hour = 16;
+int night_time_min = 25;
 int day_time_hour = 6;
 int day_time_min = 15;
 int start_time = start_time_hour * 3600 + start_time_min * 60;
@@ -304,7 +304,7 @@ void loop() {
     matrix.fillRect(0, 0, 32, 32, matrix.Color333(0, 0, 0));
     Serial.println("Night time!");
 
-    if (water_temp_f > 70.00) {
+    if (water_temp_f >= 67.00) {
     Serial.println("not cold enough");
     digitalWrite(relay_peltier, LOW);
     
@@ -313,8 +313,11 @@ void loop() {
     
     }
 
-    else if (water_temp_f <= 70.00) {
-    Serial.println("get in range");
+    else if (water_temp_f < 67.00) {
+
+    delay(20000);
+    
+    Serial.println("maintain");
     digitalWrite(relay_peltier, LOW);
   
     digitalWrite(relay_humidity, LOW);
